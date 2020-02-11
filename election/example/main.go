@@ -1,5 +1,5 @@
 /*
-Copyright 2015 The Kubernetes Authors.
+Copyright 2018 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,51 +17,61 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
-	election "k8s.io/contrib/election/lib"
+	election "github.com/gleez/leader-elector/election/lib"
 
-	"github.com/golang/glog"
-	flag "github.com/spf13/pflag"
-	"k8s.io/kubernetes/pkg/api"
-	"k8s.io/kubernetes/pkg/client/restclient"
-	client "k8s.io/kubernetes/pkg/client/unversioned"
-	kubectl_util "k8s.io/kubernetes/pkg/kubectl/cmd/util"
+	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/klog"
 )
 
 var (
-	flags = flag.NewFlagSet(
-		`elector --election=<name>`,
-		flag.ExitOnError)
-	name      = flags.String("election", "", "The name of the election")
-	id        = flags.String("id", "", "The id of this participant")
-	namespace = flags.String("election-namespace", api.NamespaceDefault, "The Kubernetes namespace for this election")
-	ttl       = flags.Duration("ttl", 10*time.Second, "The TTL for this election")
-	inCluster = flags.Bool("use-cluster-credentials", false, "Should this request use cluster credentials?")
-	addr      = flags.String("http", "", "If non-empty, stand up a simple webserver that reports the leader state")
+
+	// LDFLAGS should overwrite these variables in build time.
+	Version  string
+	Revision string
+
+	name        = flag.String("election", "", "The name of the election")
+	id          = flag.String("id", "", "The id of this participant")
+	namespace   = flag.String("election-namespace", apiv1.NamespaceDefault, "The Kubernetes namespace for this election")
+	ttl         = flag.Duration("ttl", 10*time.Second, "The TTL for this election")
+	inCluster   = flag.Bool("use-cluster-credentials", false, "Should this request use cluster credentials?")
+	kubeconfig  = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+	addr        = flag.String("http", "", "If non-empty, stand up a simple webserver that reports the leader state")
+	initialWait = flag.Bool("initial-wait", false, "wait for the old lease being expired if no leader exist.")
+	versionFlag = flag.Bool("version", false, "display version and exit")
 
 	leader = &LeaderData{}
 )
 
-func makeClient() (*client.Client, error) {
-	var cfg *restclient.Config
+func makeClient() (*kubernetes.Clientset, error) {
+	var cfg *rest.Config
 	var err error
 
 	if *inCluster {
-		if cfg, err = restclient.InClusterConfig(); err != nil {
+		if cfg, err = rest.InClusterConfig(); err != nil {
 			return nil, err
 		}
 	} else {
-		clientConfig := kubectl_util.DefaultClientConfig(flags)
-		if cfg, err = clientConfig.ClientConfig(); err != nil {
-			return nil, err
+		if *kubeconfig != "" {
+			if cfg, err = clientcmd.BuildConfigFromFlags("", *kubeconfig); err != nil {
+				return nil, err
+			}
 		}
 	}
-	return client.New(cfg)
+
+	return kubernetes.NewForConfig(rest.AddUserAgent(cfg, "leader-election"))
 }
 
 // LeaderData represents information about the current leader
@@ -76,38 +86,66 @@ func webHandler(res http.ResponseWriter, req *http.Request) {
 		res.Write([]byte(err.Error()))
 		return
 	}
+
 	res.WriteHeader(http.StatusOK)
 	res.Write(data)
 }
 
 func validateFlags() {
 	if len(*id) == 0 {
-		glog.Fatal("--id cannot be empty")
+		klog.Fatal("--id cannot be empty")
 	}
+
 	if len(*name) == 0 {
-		glog.Fatal("--election cannot be empty")
+		klog.Fatal("--election cannot be empty")
 	}
 }
 
 func main() {
-	flags.Parse(os.Args)
+	flag.Parse()
+
+	if *versionFlag {
+		fmt.Printf("k8s-leader-elector version=%s revision=%s\n", Version, Revision)
+		os.Exit(0)
+	}
+
 	validateFlags()
 
-	kubeClient, err := makeClient()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	client, err := makeClient()
 	if err != nil {
-		glog.Fatalf("error connecting to the client: %v", err)
+		klog.Fatal("error connecting to the client: %v", err)
 	}
+
+	// listen for interrupts or the Linux SIGTERM signal and cancel
+	// our context, which the leader election code will observe and
+	// step down
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-ch
+		klog.Info("Received termination, signaling shutdown")
+		cancel()
+	}()
 
 	fn := func(str string) {
 		leader.Name = str
-		fmt.Printf("%s is the leader\n", leader.Name)
+		klog.Infof("%s is the leader", leader.Name)
 	}
 
-	e, err := election.NewElection(*name, *id, *namespace, *ttl, fn, kubeClient)
+	e, err := election.NewElection(*name, *id, *namespace, *ttl, fn, client)
 	if err != nil {
-		glog.Fatalf("failed to create election: %v", err)
+		klog.Fatal("failed to create election: %v", err)
 	}
-	go election.RunElection(e)
+
+	if *initialWait {
+		klog.Info("wait for the old lease being expired if no leader exist, duration(=lease-duration+renew-deadline)", (*ttl + *ttl/2).String())
+		time.Sleep(*ttl + *ttl/2)
+	}
+
+	go election.RunElection(ctx, e)
 
 	if len(*addr) > 0 {
 		http.HandleFunc("/", webHandler)
@@ -115,4 +153,12 @@ func main() {
 	} else {
 		select {}
 	}
+}
+
+func hostname() string {
+	hostname, err := os.Hostname()
+	if err != nil {
+		panic(err)
+	}
+	return hostname
 }

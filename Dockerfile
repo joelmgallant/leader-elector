@@ -3,7 +3,7 @@
 ############################
 FROM golang:1.13 as builder
 
-ADD leader-elector /go/src/github.com/gleez/leader-elector
+ADD . /go/src/github.com/gleez/leader-elector
 # RUN cd /go/src/github.com/gleez/leader-elector \
 #  && CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-w' -o leader-elector example/main.go
 

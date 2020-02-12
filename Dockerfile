@@ -43,10 +43,10 @@ FROM scratch
 MAINTAINER Sandeep Sangamreddi <sandeepone@gmail.com>
 
 # Import from builder.
-COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=builder /etc/passwd /etc/passwd
-COPY --from=builder /etc/group /etc/group
+COPY --from=alpine /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --from=alpine /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=alpine /etc/passwd /etc/passwd
+COPY --from=alpine /etc/group /etc/group
 
 # Add the binary
 COPY --from=builder /go/src/github.com/gleez/leader-elector/leader-elector /usr/bin/
@@ -55,6 +55,5 @@ EXPOSE 4040
 
 # Use an unprivileged user.
 USER appuser:appuser
-
 
 ENTRYPOINT ["leader-elector", "--id=$(hostname)"]

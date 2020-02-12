@@ -105,7 +105,7 @@ func main() {
 	flag.Parse()
 
 	if *versionFlag {
-		fmt.Printf("k8s-leader-elector version=%s revision=%s\n", Version, Revision)
+		fmt.Printf("leader-elector version=%s revision=%s\n", Version, Revision)
 		os.Exit(0)
 	}
 

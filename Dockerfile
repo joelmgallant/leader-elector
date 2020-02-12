@@ -46,7 +46,7 @@ COPY --from=builder /go/src/github.com/gleez/leader-elector/leader-elector /usr/
 USER appuser
 
 EXPOSE 4040
-ADD run.sh /run.sh
+COPY --chown=appuser --from=builder /go/src/github.com/gleez/leader-elector/run.sh /run.sh
 
 ENTRYPOINT ["/run.sh"]
 # ENTRYPOINT [ "leader-elector", "--id=$(hostname)" ]

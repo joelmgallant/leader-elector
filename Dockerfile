@@ -40,9 +40,10 @@ COPY --from=alpine /etc/passwd /etc/passwd
 
 # Add the binary
 COPY --from=builder /go/src/github.com/gleez/leader-elector/leader-elector /usr/bin/
-COPY --chown=appuser --from=builder /go/src/github.com/gleez/leader-elector/run.sh /
+# COPY --chown=appuser --from=builder /go/src/github.com/gleez/leader-elector/run.sh /
 
 USER appuser
+COPY --from=builder /go/src/github.com/gleez/leader-elector/run.sh /
 
 EXPOSE 4040
 

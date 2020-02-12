@@ -1,4 +1,4 @@
-module github.com/gleez/leader-elector/election
+module github.com/gleez/leader-elector
 
 go 1.13
 

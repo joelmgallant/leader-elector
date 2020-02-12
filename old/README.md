@@ -1,3 +1,9 @@
+# Leader-elector sidecar container
+
+This repo contains the election directory forked from kubernetes/contrib. Info
+on how to use this can be found [on Kubernetes
+blog](https://kubernetes.io/blog/2016/01/simple-leader-election-with-kubernetes/).
+
 # Simple Leader Election with Kubernetes and Docker
 Implementing leader election in Kubernetes 
 
@@ -11,7 +17,7 @@ Annotations - Every API object can be annotated with arbitrary key/value pairs t
 Given these primitives, the code to use master election is relatively straightforward, and you can find it here. Let’s run it ourselves. 
 
 ```console
-$ kubectl run leader-elector --image=k8s.gcr.io/leader-elector:0.5 --replicas=3 -- --election=example
+$ kubectl run leader-elector --image=gleez/leader-elector:0.5 --replicas=3 -- --election=example
 ```
 
 This creates a leader election set with 3 replicas:

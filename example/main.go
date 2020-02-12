@@ -27,7 +27,7 @@ import (
 	"syscall"
 	"time"
 
-	election "github.com/gleez/leader-elector/election/lib"
+	"github.com/gleez/leader-elector/election"
 
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"

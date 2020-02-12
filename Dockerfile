@@ -4,8 +4,6 @@
 FROM golang:1.13 as builder
 
 ADD . /go/src/github.com/gleez/leader-elector
-# RUN cd /go/src/github.com/gleez/leader-elector \
-#  && CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-w' -o leader-elector example/main.go
 
 RUN cd /go/src/github.com/gleez/leader-elector \
  && COMMIT_SHA=$(git rev-parse --short HEAD) \
@@ -42,11 +40,10 @@ COPY --from=alpine /etc/passwd /etc/passwd
 
 # Add the binary
 COPY --from=builder /go/src/github.com/gleez/leader-elector/leader-elector /usr/bin/
+COPY --chown=appuser --from=builder /go/src/github.com/gleez/leader-elector/run.sh /
 
 USER appuser
 
 EXPOSE 4040
-COPY --chown=appuser --from=builder /go/src/github.com/gleez/leader-elector/run.sh /run.sh
 
 ENTRYPOINT ["/run.sh"]
-# ENTRYPOINT [ "leader-elector", "--id=$(hostname)" ]

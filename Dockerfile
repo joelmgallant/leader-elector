@@ -41,7 +41,7 @@ COPY --from=alpine /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=alpine /etc/passwd /etc/passwd
 
 # Add the binary
-COPY --from=builder /go/src/github.com/gleez/leader-elector /usr/bin/
+COPY --from=builder /go/src/github.com/gleez/leader-elector/leader-elector /usr/bin/
 
 USER appuser
 

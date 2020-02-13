@@ -56,4 +56,5 @@ EXPOSE 4040
 # Use an unprivileged user.
 USER appuser:appuser
 
-ENTRYPOINT ["leader-elector", "--id=$(hostname)"]
+# ENTRYPOINT ["leader-elector", "--id=$(hostname)"]
+CMD leader-elector

@@ -43,7 +43,7 @@ var (
 	Revision string
 
 	name        = flag.String("election", "", "The name of the election")
-	id          = flag.String("id", "", "The id of this participant")
+	id          = flag.String("id", hostname(), "The id of this participant")
 	namespace   = flag.String("election-namespace", apiv1.NamespaceDefault, "The Kubernetes namespace for this election")
 	ttl         = flag.Duration("ttl", 10*time.Second, "The TTL for this election")
 	inCluster   = flag.Bool("use-cluster-credentials", false, "Should this request use cluster credentials?")
@@ -69,6 +69,10 @@ func makeClient() (*kubernetes.Clientset, error) {
 				return nil, err
 			}
 		}
+	}
+
+	if cfg == nil {
+		return nil, fmt.Errorf("k8 config is not set")
 	}
 
 	return kubernetes.NewForConfig(rest.AddUserAgent(cfg, "leader-election"))
@@ -99,6 +103,10 @@ func validateFlags() {
 	if len(*name) == 0 {
 		klog.Fatal("--election cannot be empty")
 	}
+
+	if *kubeconfig == "" && *inCluster == false {
+		klog.Fatal("either --kubeconfig and --use-cluster-credentials cannot be empty")
+	}
 }
 
 func main() {
@@ -116,7 +124,7 @@ func main() {
 
 	client, err := makeClient()
 	if err != nil {
-		klog.Fatal("error connecting to the client: %v", err)
+		klog.Fatalf("error connecting to the client: %v", err)
 	}
 
 	// listen for interrupts or the Linux SIGTERM signal and cancel

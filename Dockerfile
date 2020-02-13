@@ -57,4 +57,4 @@ EXPOSE 4040
 USER appuser:appuser
 
 # ENTRYPOINT ["leader-elector", "--id=$(hostname)"]
-CMD ["leader-elector"]
+ENTRYPOINT ["leader-elector"]

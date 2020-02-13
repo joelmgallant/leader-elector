@@ -5,7 +5,7 @@ on how to use this can be found [on Kubernetes
 blog](https://kubernetes.io/blog/2016/01/simple-leader-election-with-kubernetes/).
 
 # Simple Leader Election with Kubernetes and Docker
-Implementing leader election in Kubernetes 
+Implementing leader election in Kubernetes using LeaseLock (Leases) API
 
 The first requirement in leader election is the specification of the set of candidates for becoming the leader. Kubernetes already uses Endpoints to represent a replicated set of pods that comprise a service, so we will re-use this same object. (aside: You might have thought that we would use ReplicationControllers, but they are tied to a specific binary, and generally you want to have a single leader even if you are in the process of performing a rolling update)
 
@@ -37,11 +37,11 @@ To see which pod was chosen as the leader, you can access the logs of one of the
 $ kubectl logs -f ${pod_name}
 ```
 
-Alternately, you can inspect the endpoints object directly: 
+Alternately, you can inspect the leases object directly: 
 
 ```console
 # ‘example’ is the name of the candidate set from the above kubectl run … command
-$ kubectl get endpoints example -o yaml
+$ kubectl get leases example -o yaml
 ```
 
 Now to validate that leader election actually works, in a different terminal, run: 
@@ -56,7 +56,7 @@ The leader-election container provides a simple webserver that can serve on any 
 
 ```console
 # delete the old leader elector group
-$ kubectl delete rc leader-elector
+$ kubectl delete deployments leader-elector
 
 # create the new group, note the --http=localhost:4040 flag
 $ kubectl run leader-elector --image=gleez/leader-elector:0.6 --replicas=3 -- --election=example --http=0.0.0.0:4040

@@ -105,7 +105,7 @@ func validateFlags() {
 	}
 
 	if *kubeconfig == "" && *inCluster == false {
-		klog.Fatal("either --kubeconfig and --use-cluster-credentials cannot be empty")
+		klog.Fatal("both --kubeconfig and --use-cluster-credentials cannot be empty")
 	}
 }
 

@@ -8,7 +8,7 @@ ADD . /go/src/github.com/gleez/leader-elector
 RUN cd /go/src/github.com/gleez/leader-elector \
  && COMMIT_SHA=$(git rev-parse --short HEAD) \
  && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w  \
-    -X main.Version=0.6 \
+    -X main.Version=0.9 \
     -X main.Revision=${COMMIT_SHA}" \
     -a -tags netgo -installsuffix netgo -o leader-elector example/main.go
     

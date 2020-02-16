@@ -156,8 +156,9 @@ func main() {
 	go election.RunElection(ctx, e)
 
 	if len(*addr) > 0 {
+		klog.Infof("http server starting at %s", *addr)
 		http.HandleFunc("/", webHandler)
-		http.ListenAndServe(*addr, nil)
+		klog.Fatal(http.ListenAndServe(*addr, nil))
 	} else {
 		select {}
 	}

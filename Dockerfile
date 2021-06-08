@@ -3,9 +3,9 @@
 ############################
 FROM golang:1.13 as builder
 
-ADD . /go/src/github.com/gleez/leader-elector
+ADD . /go/src/github.com/joelmgallant/leader-elector
 
-RUN cd /go/src/github.com/gleez/leader-elector \
+RUN cd /go/src/github.com/joelmgallant/leader-elector \
  && COMMIT_SHA=$(git rev-parse --short HEAD) \
  && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w  \
     -X main.Version=0.9 \
@@ -49,7 +49,7 @@ COPY --from=alpine /etc/passwd /etc/passwd
 COPY --from=alpine /etc/group /etc/group
 
 # Add the binary
-COPY --from=builder /go/src/github.com/gleez/leader-elector/leader-elector /usr/bin/
+COPY --from=builder /go/src/github.com/joelmgallant/leader-elector/leader-elector /usr/bin/
 
 EXPOSE 4040
 
